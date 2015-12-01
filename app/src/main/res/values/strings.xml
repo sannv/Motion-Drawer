@@ -3,7 +3,7 @@
     <string name="brush">Brush</string>
     <string name="paint">Paint</string>
     <string name="m_paint">Motion Paint</string>
-    <string name="new_canvas">Clear Canvas</string>
+    <string name="new_canvas">Save</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
 </resources>
