@@ -11,6 +11,7 @@ import android.provider.MediaStore;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,7 +29,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int rad = 0;
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
-    private float motionX, motionY;
+    private float motionX=0;
+    private float motionY=0;
+    private boolean mInitialized;
+    private long lastUpdate = 0;
+    private float lastX, lastY, deltaX, deltaY;
+    private static final double MOVEMENT_THRESHOLD = 100;
+    public static final float MOTION_DRAW_DISTANCE = 8;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         saveButton.setOnClickListener(this);
         senSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         senAccelerometer = senSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_NORMAL);
+        senSensorManager.registerListener(this, senAccelerometer , SensorManager.SENSOR_DELAY_FASTEST);
         drawingView.setUpSensor(senSensorManager, senAccelerometer);
     }
 
@@ -122,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        currPaint.setBackground("FF00FF00");
             //fill in
             int c = Color.parseColor("#FF00FF00");
-            drawingView.setColor("#FF00FF00");//this is here for testing
+            drawingView.setColor("#FF00FF00");//this is here for testing. call this method to set drawing color
             currPaint.setTag("#FF00FF00");
             currPaint.setBackgroundColor(c);
             rad = 1;
@@ -130,29 +137,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         else if(rad == 1){
             drawingView.setColor("#FF000000");
             currPaint.setTag("#FF000000");
-            currPaint.setBackgroundColor((int)Color.parseColor("#FF000000"));
+            currPaint.setBackgroundColor(Color.parseColor("#FF000000"));
             rad = 0;
         }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-//        Sensor mySensor = sensorEvent.sensor;
-        motionX = event.values[0];
-        motionY = event.values[1];
-        float newX;
-        float newY;
-//            if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//                motionX = event.values[0];
-//                motionY = event.values[1];
-        newX = event.values[0];
-        newY = event.values[1];
-                if(Math.abs(newX - motionX) >= 0 || Math.abs(newY - motionY) > 0) {
-                    drawingView.onSensorChange(motionX, motionY);
-                }
-
-//        }
+        if (event.values[0] >=0 && event.values[1] >=0){
+//            drawingView.addXY = true;
+//            drawingView.subXY = false;
+//            drawingView.subXaddY = false;
+//            drawingView.addXsubY = false;
+            drawingView.storeSenData(MOTION_DRAW_DISTANCE, MOTION_DRAW_DISTANCE);
+            drawingView.drawing1();
+        }
+        else if(event.values[0] <0 && event.values[1] < 0){
+            drawingView.storeSenData(-MOTION_DRAW_DISTANCE, -MOTION_DRAW_DISTANCE);
+//            drawingView.addXY = false;
+//            drawingView.subXY = true;
+//            drawingView.subXaddY = false;
+//            drawingView.addXsubY = false;
+//            drawingView.drawing1();
+        }
+        else if(event.values[0] <0 && event.values[1] >= 0){
+            drawingView.storeSenData(-MOTION_DRAW_DISTANCE, MOTION_DRAW_DISTANCE);
+//            drawingView.addXY = false;
+//            drawingView.subXY = false;
+//            drawingView.subXaddY = true;
+//            drawingView.addXsubY = false;
+//            drawingView.drawing1();
+        }
+        else if(event.values[0] >=0 && event.values[1] < 0){
+            drawingView.storeSenData(MOTION_DRAW_DISTANCE, -MOTION_DRAW_DISTANCE);
+//            drawingView.addXY = false;
+//            drawingView.subXY = false;
+//            drawingView.subXaddY = false;
+//            drawingView.addXsubY = true;
+//            drawingView.drawing1();
+        }
     }
+
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {

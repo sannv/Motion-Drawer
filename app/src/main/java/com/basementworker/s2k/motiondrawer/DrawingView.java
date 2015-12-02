@@ -14,9 +14,12 @@ import android.os.Bundle;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
+
+import java.util.ArrayList;
 
 /**
  * Created by s2k on 11/16/2015.
@@ -29,9 +32,13 @@ public class DrawingView extends View implements SensorEventListener{
     private Canvas drawCanvas;
     private Bitmap canvasBitmap;
     private boolean useMotion, useBrush;
+    public boolean addXY, addXsubY, subXaddY, subXY;
     private SensorManager senSensorManager;
     private Sensor senAccelerometer;
     private float motionX, motionY, touchX, touchY, newX, newY;
+    private ArrayList<DrawPoint> drawPointList;
+    private static final float MOTION_DRAW_DISTANCE = 8;
+
 
     public DrawingView(Context context, AttributeSet attrs){
         super(context, attrs);
@@ -53,6 +60,8 @@ public class DrawingView extends View implements SensorEventListener{
 
         canvasPaint = new Paint(Paint.DITHER_FLAG);
 
+        drawPointList = new ArrayList<DrawPoint>();
+
     }
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh){
@@ -71,8 +80,8 @@ public class DrawingView extends View implements SensorEventListener{
     public boolean onTouchEvent(MotionEvent event) {
         touchX = event.getX();
         touchY = event.getY();
-        motionX = getMotionX();
-        motionY = getMotionY();
+//        motionX = getMotionX();
+//        motionY = getMotionY();
 
         if (useBrush == true) {
             switch (event.getAction()) {
@@ -81,6 +90,7 @@ public class DrawingView extends View implements SensorEventListener{
                     break;
                 case MotionEvent.ACTION_MOVE:
                     drawPath.lineTo(touchX, touchY);
+                    Log.d("onTouchEvent", "the x and y are :" + touchX + " " + touchY);
                     break;
                 case MotionEvent.ACTION_UP:
                     drawCanvas.drawPath(drawPath, drawPaint);
@@ -94,16 +104,12 @@ public class DrawingView extends View implements SensorEventListener{
         if(useMotion == true) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    touchX = event.getX();
-                    touchY = event.getY();
-                    drawPath.moveTo(motionX, motionY);
-//                    drawPath.reset();
-                    drawPath.lineTo(motionX, motionY);
-                    drawing();
+                    storeSenData(touchX, touchY);
+//                    drawing1();
                     break;
                 case MotionEvent.ACTION_UP:
-                    drawCanvas.drawPath(drawPath, drawPaint);
-                    drawPath.reset();
+                    useMotion = false;
+                    drawing();
                     break;
                 default:
                     return false;
@@ -114,27 +120,73 @@ public class DrawingView extends View implements SensorEventListener{
         return true;
     }
 
-    public void onSensorChange(float x, float y) {
-        if(useMotion==true) {
-                motionX = x;
-                motionY = y;
-                newX = touchX + motionX ;
-                newY = touchY + motionY ;
-                drawing();
-            setColor("#FF0000FF");
+//    public void onSensorChange(float x, float y) {
+//        if(useMotion==true) {
+//                motionX = x;
+//                motionY = y;
+//                newX = touchX + motionX ;
+//                newY = touchY + motionY ;
+//                drawing();
+//            setColor("#FF0000FF");
+//
+//        }
+//    }
 
+    public void storeSenData(float senX, float senY){
+        if(useMotion == true) {
+//            motionX = senX;
+//            motionY = senY;
+            drawPointList.add(new DrawPoint(senX, senY));
         }
+
     }
 
+    public void drawing1(){
+        if(addXY){
+            storeSenData(MOTION_DRAW_DISTANCE, MOTION_DRAW_DISTANCE);
+        }
+        else if(subXY){
+            storeSenData(-MOTION_DRAW_DISTANCE, -MOTION_DRAW_DISTANCE);
+        }
+        else if(addXsubY){
+            storeSenData( MOTION_DRAW_DISTANCE, -MOTION_DRAW_DISTANCE);
+        }
+        else if(subXaddY){
+            storeSenData( -MOTION_DRAW_DISTANCE , MOTION_DRAW_DISTANCE);
+        }
+
+    }
 
     public void drawing(){
         drawPath.moveTo(touchX, touchY);
-        drawPath.moveTo(newX, newY);
-        drawCanvas.drawPath(drawPath, drawPaint);
-        touchX =+newX;
-        touchY =+newY;
-//        drawPath.reset();
+        Log.d("the array", "the size is " + drawPointList.size());
+        float tempx = touchX;
+        float tempy = touchY;
+//        Log.d("drawing ", "where it starts " + tempx + " " + tempy);
+        for(int x=0; x < drawPointList.size(); x++) {
+            if (x == 2) {
+                x++;
+            } else {
+                Log.d("drawing ", "wtf " + drawPointList.get(x).getX() + " " + drawPointList.get(x).getY());
+                if (drawPointList.get(x).getX() <= MOTION_DRAW_DISTANCE ||
+                        drawPointList.get(x).getY() <= MOTION_DRAW_DISTANCE) {
+                    float dpx, dpy;
+                    dpx = drawPointList.get(x).getX();
+                    dpy = drawPointList.get(x).getY();
+                    tempx = tempx + dpx;
+                    tempy = tempy + dpy;
 
+                    drawPath.lineTo(tempx, tempy);
+                }
+                else{
+
+                }
+            }
+        }
+
+        drawPointList.clear();
+        drawCanvas.drawPath(drawPath, drawPaint);
+        drawPath.reset();
         invalidate();
     }
 
@@ -173,19 +225,7 @@ public class DrawingView extends View implements SensorEventListener{
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-//        Sensor mySensor = sensorEvent.sensor;
-        motionX = event.values[0];
-        motionY = event.values[1];
-        float newX;
-        float newY;
-//            if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//                motionX = event.values[0];
-//                motionY = event.values[1];
-        newX = event.values[0];
-        newY = event.values[1];
-        if(Math.abs(newX - motionX) >= 0 || Math.abs(newY - motionY) > 0) {
-            onSensorChange(motionX, motionY);
-        }
+
     }
 
     @Override
